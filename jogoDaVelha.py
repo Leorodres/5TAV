@@ -47,6 +47,9 @@ class JogoDaVelha:
         if self.tabuleiro[1][1] is None:
             self.tabuleiro[1][1] = "O"
             self.botoes[1][1].config(text="O")  
+            if self.checar_vencedor():  # Verifica se o computador venceu
+                messagebox.showinfo("Fim de Jogo", "O venceu!")
+                self.reiniciar()
             self.jogador_atual = "X"
             return
         
@@ -58,6 +61,9 @@ class JogoDaVelha:
                     if self.checar_vencedor():
                         self.tabuleiro[linha][coluna] = "O"
                         self.botoes[linha][coluna].config(text="O")
+                        if self.checar_vencedor():  # Verifica se o computador venceu
+                            messagebox.showinfo("Fim de Jogo", "O venceu!")
+                            self.reiniciar()
                         self.jogador_atual = "X"
                         return
                     self.tabuleiro[linha][coluna] = None
@@ -69,7 +75,8 @@ class JogoDaVelha:
                     self.tabuleiro[linha][coluna] = "O"
                     if self.checar_vencedor():
                         self.botoes[linha][coluna].config(text="O")
-                        self.jogador_atual = "X"
+                        messagebox.showinfo("Fim de Jogo", "O venceu!")
+                        self.reiniciar()
                         return
                     self.tabuleiro[linha][coluna] = None
 
@@ -78,13 +85,16 @@ class JogoDaVelha:
             self.jogador_atual = "X"
             return
 
-        # Caso nao possa fazer nada para vencer aleatoriza jogada
+        # Caso não possa fazer nada para vencer aleatoriza jogada
         while True:
             linha = random.randint(0, 2)
             coluna = random.randint(0, 2)
             if self.tabuleiro[linha][coluna] is None:
                 self.tabuleiro[linha][coluna] = "O"
                 self.botoes[linha][coluna].config(text="O")
+                if self.checar_vencedor():  # Verifica se o computador venceu
+                    messagebox.showinfo("Fim de Jogo", "O venceu!")
+                    self.reiniciar()
                 self.jogador_atual = "X"
                 break
 
@@ -92,14 +102,13 @@ class JogoDaVelha:
     def verificar_triangulo(self):
         # Padrões de triângulo a serem bloqueados ou formados
         triangulos_humanos = [
-            # Triângulos formados pelos cantos e as bordas correspondentes
             [(0, 0), (0, 1), (1, 0)], # Canto superior esquerdo e bordas
             [(0, 2), (0, 1), (1, 2)], # Canto superior direito e bordas
             [(2, 0), (1, 0), (2, 1)], # Canto inferior esquerdo e bordas
             [(2, 2), (1, 2), (2, 1)], # Canto inferior direito e bordas
         ]
 
-        # Bloqueia triângulo do jogador humano
+        # Bloqueia triângulo humano
         for triangulo in triangulos_humanos:
             jogadas_humanas = 0
             vazio = None
@@ -108,13 +117,13 @@ class JogoDaVelha:
                     jogadas_humanas += 1
                 elif self.tabuleiro[l][c] is None:
                     vazio = (l, c)
-            if jogadas_humanas == 2 and vazio:  # Bloqueia se houver 2 jogadas humanas e 1 espaço vazio
+            if jogadas_humanas == 2 and vazio:
                 l, c = vazio
                 self.tabuleiro[l][c] = "O"
                 self.botoes[l][c].config(text="O")
                 return True
 
-        # Tenta formar um triângulo para o computador
+        # Tenta atacar usando triangulo
         for triangulo in triangulos_humanos:
             jogadas_computador = 0
             vazio = None
@@ -123,7 +132,7 @@ class JogoDaVelha:
                     jogadas_computador += 1
                 elif self.tabuleiro[l][c] is None:
                     vazio = (l, c)
-            if jogadas_computador == 2 and vazio:  # Forma o triângulo se houver 2 jogadas do computador e 1 espaço vazio
+            if jogadas_computador == 2 and vazio:
                 l, c = vazio
                 self.tabuleiro[l][c] = "O"
                 self.botoes[l][c].config(text="O")
