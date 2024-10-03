@@ -11,7 +11,7 @@ class JogoDaVelha:
         # Aleatoriza o jogador a iniciar e caso seja o "O" faz uma jogada aleatoria
         self.jogador_atual = "X" if random.randint(1, 6) % 2 == 0 else "O"
         if self.jogador_atual == "O":
-            self.jogador_aleatorio()
+            self.jogada_computador()
 
     def criar_botoes(self):
         self.botoes = [[None for _ in range(3)] for _ in range(3)]
@@ -40,18 +40,102 @@ class JogoDaVelha:
                 # Modifica o jogador que está jogando
                 self.jogador_atual = "O" if self.jogador_atual == "X" else "X"
                 if self.jogador_atual == "O":
-                    self.jogador_aleatorio()
+                    self.jogada_computador()
 
-    def jogador_aleatorio(self):
-        botoes_vazios = [(l, c) for l in range(3) for c in range(3) if self.tabuleiro[l][c] is None] # Verifica botoes vazios
-        linha, coluna = random.choice(botoes_vazios)
-        self.clique(linha, coluna)
+    def jogada_computador(self):
+        # Verifica se é a primeira jogada e joga no centro
+        if self.tabuleiro[1][1] is None:
+            self.tabuleiro[1][1] = "O"
+            self.botoes[1][1].config(text="O")  
+            self.jogador_atual = "X"
+            return
+        
+        # Bloqueia o jogador humano
+        for linha in range(3):
+            for coluna in range(3):
+                if self.tabuleiro[linha][coluna] is None:
+                    self.tabuleiro[linha][coluna] = "X"
+                    if self.checar_vencedor():
+                        self.tabuleiro[linha][coluna] = "O"
+                        self.botoes[linha][coluna].config(text="O")
+                        self.jogador_atual = "X"
+                        return
+                    self.tabuleiro[linha][coluna] = None
+
+        # Tenta vencer
+        for linha in range(3):
+            for coluna in range(3):
+                if self.tabuleiro[linha][coluna] is None:
+                    self.tabuleiro[linha][coluna] = "O"
+                    if self.checar_vencedor():
+                        self.botoes[linha][coluna].config(text="O")
+                        self.jogador_atual = "X"
+                        return
+                    self.tabuleiro[linha][coluna] = None
+
+        # Verifica triângulos
+        if self.verificar_triangulo():
+            self.jogador_atual = "X"
+            return
+
+        # Caso nao possa fazer nada para vencer aleatoriza jogada
+        while True:
+            linha = random.randint(0, 2)
+            coluna = random.randint(0, 2)
+            if self.tabuleiro[linha][coluna] is None:
+                self.tabuleiro[linha][coluna] = "O"
+                self.botoes[linha][coluna].config(text="O")
+                self.jogador_atual = "X"
+                break
+
+
+    def verificar_triangulo(self):
+        # Padrões de triângulo a serem bloqueados ou formados
+        triangulos_humanos = [
+            # Triângulos formados pelos cantos e as bordas correspondentes
+            [(0, 0), (0, 1), (1, 0)], # Canto superior esquerdo e bordas
+            [(0, 2), (0, 1), (1, 2)], # Canto superior direito e bordas
+            [(2, 0), (1, 0), (2, 1)], # Canto inferior esquerdo e bordas
+            [(2, 2), (1, 2), (2, 1)], # Canto inferior direito e bordas
+        ]
+
+        # Bloqueia triângulo do jogador humano
+        for triangulo in triangulos_humanos:
+            jogadas_humanas = 0
+            vazio = None
+            for (l, c) in triangulo:
+                if self.tabuleiro[l][c] == "X":
+                    jogadas_humanas += 1
+                elif self.tabuleiro[l][c] is None:
+                    vazio = (l, c)
+            if jogadas_humanas == 2 and vazio:  # Bloqueia se houver 2 jogadas humanas e 1 espaço vazio
+                l, c = vazio
+                self.tabuleiro[l][c] = "O"
+                self.botoes[l][c].config(text="O")
+                return True
+
+        # Tenta formar um triângulo para o computador
+        for triangulo in triangulos_humanos:
+            jogadas_computador = 0
+            vazio = None
+            for (l, c) in triangulo:
+                if self.tabuleiro[l][c] == "O":
+                    jogadas_computador += 1
+                elif self.tabuleiro[l][c] is None:
+                    vazio = (l, c)
+            if jogadas_computador == 2 and vazio:  # Forma o triângulo se houver 2 jogadas do computador e 1 espaço vazio
+                l, c = vazio
+                self.tabuleiro[l][c] = "O"
+                self.botoes[l][c].config(text="O")
+                return True
+
+        return False
 
     def checar_vencedor(self):
         for linha in self.tabuleiro:
             if linha[0] == linha[1] == linha[2] and linha[0] is not None:
                 return True
-        for coluna in range(3): 
+        for coluna in range(3):
             if self.tabuleiro[0][coluna] == self.tabuleiro[1][coluna] == self.tabuleiro[2][coluna] and self.tabuleiro[0][coluna] is not None:
                 return True
             
