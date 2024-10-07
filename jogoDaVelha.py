@@ -23,7 +23,12 @@ class JogoDaVelha:
     def jogar(self):
         while True:
             self.mostrar_tabuleiro()  # Mostrar o tabuleiro no início de cada turno
-            if self.modo_jogo in ["JxJ", "JxAleatório", "JxCampeão"]:
+            if self.modo_jogo in ["JxJ"]:
+                posicao = int(input(f"Jogador {'X' if self.jogador_atual == 1 else 'O'} Escolha uma posição de 1 a 9 para jogar (1 é canto superior esquerdo, 9 é canto inferior direito): ")) - 1
+                if self.tabuleiro[posicao + 1] == 0:
+                    self.fazer_jogada(posicao, self.jogador_atual)
+                    
+            if self.modo_jogo in ["JxAleatório", "JxCampeão"]:
                 if self.jogador_atual == 1:  # Jogador humano
                     posicao = int(input("Escolha uma posição de 1 a 9 para jogar (1 é canto superior esquerdo, 9 é canto inferior direito): ")) - 1
                     if self.tabuleiro[posicao + 1] == 0:
@@ -111,12 +116,20 @@ class JogoDaVelha:
 
     def checar_vencedor(self):
         v = self.tabuleiro[1:10]
-        # linhas, colunas e diagonais
-        return any([
-            (v[0] == v[1] == v[2] != 0), (v[3] == v[4] == v[5] != 0), (v[6] == v[7] == v[8] != 0),
-            (v[0] == v[3] == v[6] != 0), (v[1] == v[4] == v[7] != 0), (v[2] == v[5] == v[8] != 0),
-            (v[0] == v[4] == v[8] != 0), (v[2] == v[4] == v[6] != 0)
-        ])
+
+        # linhas
+        if (v[0] == v[1] == v[2] != 0) or (v[3] == v[4] == v[5] != 0) or (v[6] == v[7] == v[8] != 0):
+            return True
+
+        # colunas
+        if (v[0] == v[3] == v[6] != 0) or (v[1] == v[4] == v[7] != 0) or (v[2] == v[5] == v[8] != 0):
+            return True
+
+        # diagonais
+        if (v[0] == v[4] == v[8] != 0) or (v[2] == v[4] == v[6] != 0):
+            return True
+
+        return False
 
 
 # Interface para escolha do tipo de jogo

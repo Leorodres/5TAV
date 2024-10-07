@@ -1,23 +1,28 @@
 import random
 
-class JogoDaVelhaConsole:
+class JogoDaVelha:
     def __init__(self):
-        # Inicializa o vetor de jogo com 10 posições (1 para número de jogadas, 9 para o tabuleiro)
         self.tabuleiro = [0] + [0] * 9
         # Aleatoriza o jogador que inicia
         self.jogador_atual = 1 if random.randint(1, 6) % 2 == 0 else -1
         print(f"O jogador {'X' if self.jogador_atual == 1 else 'O'} começa!")
+        if self.jogador_atual == -1:
+            self.jogada_computador()
         self.jogar()
 
     def jogar(self):
         while True:
             self.mostrar_tabuleiro()
-            posicao = int(input(f"Jogador {'X' if self.jogador_atual == 1 else 'O'} Escolha uma posição de 1 a 9 para jogar (1 é canto superior esquerdo, 9 é canto inferior direito): ")) - 1
-            if self.tabuleiro[posicao + 1] == 0:
-                self.fazer_jogada(posicao, self.jogador_atual)
-            else:
-                print("Posição inválida! Tente novamente.")
-                continue
+            if self.jogador_atual == 1:  # Jogador humano
+                posicao = int(input("Escolha uma posição de 1 a 9 para jogar (1 é canto superior esquerdo, 9 é canto inferior direito): ")) - 1
+                if self.tabuleiro[posicao + 1] == 0:
+                    self.fazer_jogada(posicao, 1)
+                else:
+                    print("Posição inválida! Tente novamente.")
+                    continue
+            else:  # Jogada do computador
+                self.jogada_computador()
+
             if self.checar_vencedor():
                 self.mostrar_tabuleiro()
                 print(f"O jogador {'X' if self.jogador_atual == 1 else 'O'} venceu!")
@@ -32,7 +37,15 @@ class JogoDaVelhaConsole:
 
     def fazer_jogada(self, posicao, jogador):
         self.tabuleiro[posicao + 1] = jogador
-        self.tabuleiro[0] += 1
+        self.tabuleiro[0] += 1 # Numero de jogadas
+
+    def jogada_computador(self):
+        print("Jogada do computador...")
+        while True:
+            posicao = random.randint(0, 8)
+            if self.tabuleiro[posicao + 1] == 0:
+                self.fazer_jogada(posicao, -1)
+                break
 
     def mostrar_tabuleiro(self):
         simbolos = {1: 'X', -1: 'O', 0: ' '}
@@ -48,16 +61,14 @@ class JogoDaVelhaConsole:
         # linhas
         if (v[0] == v[1] == v[2] != 0) or (v[3] == v[4] == v[5] != 0) or (v[6] == v[7] == v[8] != 0):
             return True
-
         # colunas
         if (v[0] == v[3] == v[6] != 0) or (v[1] == v[4] == v[7] != 0) or (v[2] == v[5] == v[8] != 0):
             return True
-
         # diagonais
         if (v[0] == v[4] == v[8] != 0) or (v[2] == v[4] == v[6] != 0):
             return True
-
         return False
 
+
 # Inicializa o jogo
-JogoDaVelhaConsole()
+JogoDaVelha()
