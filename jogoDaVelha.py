@@ -11,7 +11,7 @@ class JogoDaVelha:
     def iniciar_jogos(self):
         for _ in range(self.num_jogos):
             self.tabuleiro = [0] + [0] * 10
-            self.jogador_atual = 1 if random.randint(1, 6) % 2 == 0 else -1
+            self.jogador_atual = 1 if random.randint(1, 6) % 2 == 0 else 1
             print(f"\n\nO jogador {'X' if self.jogador_atual == 1 else 'O'} começa!")
             self.jogar()
 
@@ -33,24 +33,35 @@ class JogoDaVelha:
                 else:
                     print("Posição inválida! Tente novamente.")
                     continue  
+            elif self.modo_jogo in ["JxAleatório", "JxCampeão"]:
+                if self.jogador_atual == 1:
+                    self.mostrar_tabuleiro()
+                    posicao = int(input(f"Jogador {'X' if self.jogador_atual == 1 else 'O'}, escolha uma posição de 1 a 9 para jogar (1 é canto superior esquerdo, 9 é canto inferior direito): ")) - 1    
+                    if self.tabuleiro[posicao + 1] == 0:
+                        self.fazer_jogada(posicao, 1)
+                    else:
+                        print("Posição inválida! Tente novamente.")
+                        continue
+                else:  
+                    self.jogada_computador()
             else:
-                self.mostrar_tabuleiro()
                 self.jogada_computador()
-
             if self.checar_vencedor():
-                if(self.jogador_atual == 1): self.mostrar_tabuleiro()
+                self.mostrar_tabuleiro()
                 vencedor = 'X' if self.jogador_atual == 1 else 'O'
                 print(f"O jogador {vencedor} venceu!")
                 self.tabuleiro[10] = vencedor
                 self.resultados[vencedor] += 1
                 break
             elif self.tabuleiro[0] == 9:  # Verifica se deu empate
+                self.mostrar_tabuleiro()
                 print("Empate!")
                 self.tabuleiro[10] = 'V'
                 self.resultados["Empate"] += 1
                 break
 
             # Alterna o jogador
+            print(self.tabuleiro)
             self.jogador_atual *= -1
 
         self.tabuleiros.append(self.tabuleiro.copy())
@@ -83,8 +94,8 @@ class JogoDaVelha:
 
     def jogada_campeao(self):
         jogador_adversario = 1 if self.jogador_atual == -1 else -1
-
-        for posicao in range(9):
+        
+        for posicao in range(9): # Tenta vencer
             if self.tabuleiro[posicao + 1] == 0:
                 self.tabuleiro[posicao + 1] = self.jogador_atual
                 if self.checar_vencedor():
@@ -92,7 +103,11 @@ class JogoDaVelha:
                     return
                 self.tabuleiro[posicao + 1] = 0
 
-        for posicao in range(9):
+        if self.tabuleiro[5] == 0: # Caso o centro esteja vazio, joga no centro
+            self.fazer_jogada(4, self.jogador_atual)
+            return
+
+        for posicao in range(9): # Tenta bloquear
             if self.tabuleiro[posicao + 1] == 0:
                 self.tabuleiro[posicao + 1] = jogador_adversario
                 if self.checar_vencedor():
@@ -101,11 +116,26 @@ class JogoDaVelha:
                     return
                 self.tabuleiro[posicao + 1] = 0
 
-        if self.tabuleiro[5] == 0:
-            self.fazer_jogada(4, self.jogador_atual)
-            return
+        
+        
+        # Laterais dos cantos
+        cantos_com_laterais = {
+            1: [2, 4],
+            3: [2, 6],  
+            7: [4, 8],  
+            9: [6, 8]   
+        }
 
-        if self.tabuleiro[5] == jogador_adversario:
+        # Verifica se a contagem de jogada é a correta para a jogada das laterais
+        if all(self.tabuleiro[i] == 0 for i in [1, 3, 7, 9] if i != self.jogador_atual):
+            for canto, laterais in cantos_com_laterais.items():  
+                if all(self.tabuleiro[lateral] == jogador_adversario for lateral in laterais) and self.tabuleiro[canto] == 0:
+                    print('entrou')
+                    self.fazer_jogada(canto - 1, self.jogador_atual)
+                    return
+
+
+        if self.tabuleiro[5] == jogador_adversario and self.tabuleiro[0] == 1: # Caso o centro esteja ocupado joga em um canto
             if self.tabuleiro[1] == 0:
                 self.fazer_jogada(0, self.jogador_atual)
                 return
@@ -118,8 +148,18 @@ class JogoDaVelha:
             if self.tabuleiro[9] == 0:
                 self.fazer_jogada(8, self.jogador_atual)
                 return
+        
+        # Verifica se o centro está ocupado pelo jogador adversário e se já ocorreram duas jogadas para impedir
+        if self.tabuleiro[5] == jogador_adversario and self.tabuleiro[0] == 3:
+            cantos = [1, 3, 7, 9]
+            print('entrou')
+            # Procura um canto disponível e joga nele
+            for canto in cantos:
+                if self.tabuleiro[canto] == 0:
+                    self.fazer_jogada(canto - 1, self.jogador_atual)
+                    return
 
-        cantos_opostos = [(1, 9), (3, 7)]
+        cantos_opostos = [(1, 9), (3, 7), (9, 1), (7,3)] # Caso o inimigo jogou em cantos opostos joga em uma lateral
         if not any(self.tabuleiro[pos] != 0 for pos in [2, 4, 6, 8]):
             for canto1, canto2 in cantos_opostos:
                 if (self.tabuleiro[canto1] == jogador_adversario and
@@ -137,7 +177,7 @@ class JogoDaVelha:
             9: 0
         }
         for canto in opostos:
-            if self.tabuleiro[canto] == jogador_adversario and self.tabuleiro[opostos[canto]] == 0:
+            if self.tabuleiro[canto] == jogador_adversario and self.tabuleiro[opostos[canto] + 1] == 0:
                 self.fazer_jogada(opostos[canto], self.jogador_atual)
                 return
 
