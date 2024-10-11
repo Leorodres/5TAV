@@ -1,4 +1,5 @@
 import random
+import csv
 
 class JogoDaVelha:
     def __init__(self, modo_jogo, num_jogos=1):
@@ -6,12 +7,13 @@ class JogoDaVelha:
         self.num_jogos = num_jogos
         self.resultados = {"X": 0, "O": 0, "Empate": 0}
         self.tabuleiros = []
+        self.total_jogos = 0
         self.iniciar_jogos()
 
     def iniciar_jogos(self):
         for _ in range(self.num_jogos):
             self.tabuleiro = [0] + [0] * 10
-            self.jogador_atual = 1 if random.randint(1, 6) % 2 == 0 else 1
+            self.jogador_atual = 1 if random.randint(1, 6) % 2 == 0 else -1
             print(f"\n\nO jogador {'X' if self.jogador_atual == 1 else 'O'} começa!")
             self.jogar()
 
@@ -25,7 +27,6 @@ class JogoDaVelha:
     def jogar(self):
         while True:
             if self.modo_jogo == "JxJ":
-                print(self.tabuleiro)
                 self.mostrar_tabuleiro()
                 posicao = int(input(f"Jogador {'X' if self.jogador_atual == 1 else 'O'}, escolha uma posição de 1 a 9 para jogar (1 é canto superior esquerdo, 9 é canto inferior direito): ")) - 1
                 if 0 <= posicao <= 8 and self.tabuleiro[posicao + 1] == 0:
@@ -61,10 +62,24 @@ class JogoDaVelha:
                 break
 
             # Alterna o jogador
-            print(self.tabuleiro)
             self.jogador_atual *= -1
 
-        self.tabuleiros.append(self.tabuleiro.copy())
+        # Atualiza o acumulado de resultados ao final do jogo
+        self.total_jogos += 1
+        acumulado_resultados = [
+            self.total_jogos,
+            self.resultados['X'],  # Acumulado de vitórias do jogador 1 (X)
+            self.resultados['Empate'],  # Acumulado de velhas (empates)
+            self.resultados['O']  # Acumulado de vitórias do jogador 2 (O)
+        ]
+        self.tabuleiros.append(self.tabuleiro[:10] + acumulado_resultados)
+        with open('resultados.csv', mode='w', newline='', encoding='utf-8') as arquivo_csv:
+            escritor = csv.writer(arquivo_csv)
+
+            # Escrevendo cada linha no arquivo
+            for linha in self.tabuleiros:
+                escritor.writerow(linha)
+        
 
     def fazer_jogada(self, posicao, jogador):
         self.tabuleiro[posicao + 1] = jogador
@@ -130,7 +145,6 @@ class JogoDaVelha:
         if all(self.tabuleiro[i] == 0 for i in [1, 3, 7, 9] if i != self.jogador_atual):
             for canto, laterais in cantos_com_laterais.items():  
                 if all(self.tabuleiro[lateral] == jogador_adversario for lateral in laterais) and self.tabuleiro[canto] == 0:
-                    print('entrou')
                     self.fazer_jogada(canto - 1, self.jogador_atual)
                     return
 
@@ -152,14 +166,12 @@ class JogoDaVelha:
         # Verifica se o centro está ocupado pelo jogador adversário e se já ocorreram duas jogadas para impedir
         if self.tabuleiro[5] == jogador_adversario and self.tabuleiro[0] == 3:
             cantos = [1, 3, 7, 9]
-            print('entrou')
-            # Procura um canto disponível e joga nele
-            for canto in cantos:
+            for canto in cantos: # Procura um canto disponível e joga nele
                 if self.tabuleiro[canto] == 0:
                     self.fazer_jogada(canto - 1, self.jogador_atual)
                     return
 
-        cantos_opostos = [(1, 9), (3, 7), (9, 1), (7,3)] # Caso o inimigo jogou em cantos opostos joga em uma lateral
+        cantos_opostos = [(1, 9), (3, 7), (9, 1), (7, 3)] # Caso o inimigo jogou em cantos opostos joga em uma lateral
         if not any(self.tabuleiro[pos] != 0 for pos in [2, 4, 6, 8]):
             for canto1, canto2 in cantos_opostos:
                 if (self.tabuleiro[canto1] == jogador_adversario and
