@@ -1,13 +1,16 @@
 import random
 import csv
-
+import matplotlib.pyplot as plt
 class JogoDaVelha:
     def __init__(self, modo_jogo, num_jogos=1):
         self.modo_jogo = modo_jogo
         self.num_jogos = num_jogos
         self.resultados = {"X": 0, "O": 0, "Empate": 0}
+        self.resultados_x = []
+        self.resultados_o = []
+        self.resultados_empates = []
+        self.conhecimento = {}
         self.tabuleiros = []
-        self.estado_conhecimento = self.carregar_conhecimento()
 
         while True:
             try:
@@ -20,7 +23,6 @@ class JogoDaVelha:
                 print("Entrada inválida. Por favor, digite um número.")
         self.total_jogos = 0
         self.iniciar_jogos()
-        self.salvar_conhecimento()
 
     def iniciar_jogos(self):
         for _ in range(self.num_jogos):
@@ -28,7 +30,24 @@ class JogoDaVelha:
             self.jogador_atual = self.jogador_inicial
             self.jogar()
 
+            # Atualiza os dados para o gráfico
+            self.resultados_x.append(self.resultados["X"])
+            self.resultados_o.append(self.resultados["O"])
+            self.resultados_empates.append(self.resultados["Empate"])
+
         if self.num_jogos > 1:
+            # Gerar gráfico
+            x = list(range(1, self.num_jogos + 1))
+            plt.plot(x, self.resultados_x, label="Vitórias X", color='blue')
+            plt.plot(x, self.resultados_o, label="Vitórias O", color='red')
+            plt.plot(x, self.resultados_empates, label="Empates", color='green')
+            plt.xlabel("Número de Jogos")
+            plt.ylabel("Quantidade de Vitórias/Empates")
+            plt.title("Resultados Acumulados dos Jogos")
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+
             print("\nResultados:")
             print(f"Vitórias de X: {self.resultados['X']} ({round(((self.resultados['X'] / self.num_jogos) * 100), 2)}%)")
             print(f"Vitórias de O: {self.resultados['O']} ({round(((self.resultados['O'] / self.num_jogos) * 100), 2)}%)")
@@ -36,7 +55,7 @@ class JogoDaVelha:
             #print(f"Tabuleiros de todos os jogos: {self.tabuleiros}")
 
     def jogar(self):
-        estados = []
+        jogadas_inteligente = []
         while True:
             if self.modo_jogo == "JxJ":
                 posicao = int(input(f"Jogador {'X' if self.jogador_atual == 1 else 'O'}, escolha uma posição de 1 a 9 para jogar: ")) - 1
@@ -55,11 +74,9 @@ class JogoDaVelha:
                         print("Posição inválida! Tente novamente.")
                         continue
                 else:
-                    self.jogada_computador()         
+                    jogadas_inteligente = self.jogada_computador(jogadas_inteligente)         
             else:
-                self.jogada_computador()
-
-            estados.append(self.tabuleiro.copy())
+                jogadas_inteligente = self.jogada_computador(jogadas_inteligente)
 
             if self.checar_vencedor():
                 #self.mostrar_tabuleiro()
@@ -67,8 +84,9 @@ class JogoDaVelha:
                 #print(f"O jogador {vencedor} venceu!")
                 self.tabuleiro[10] = vencedor
                 self.resultados[vencedor] += 1
+                resultado = 1 if vencedor == 'O' else -1
                 if "Inteligente" in self.modo_jogo:
-                    self.atualizar_conhecimento(estados, 1 if vencedor == 'O' else -1)
+                   self.atualizar_conhecimento(jogadas_inteligente, resultado)
                 break
             elif self.tabuleiro[0] == 9:
                 #self.mostrar_tabuleiro()
@@ -76,8 +94,9 @@ class JogoDaVelha:
                 self.tabuleiro[10] = 'V'
                 self.resultados["Empate"] += 1
                 if "Inteligente" in self.modo_jogo:
-                    self.atualizar_conhecimento(estados, 0) 
+                    self.atualizar_conhecimento(jogadas_inteligente, 0)
                 break
+            
             self.jogador_atual *= -1
         
         # Atualiza o acumulado de resultados ao final do jogo
@@ -102,61 +121,34 @@ class JogoDaVelha:
         self.tabuleiro[0] += 1 # Numero de jogadas
 
     def jogada_inteligente(self):
-        melhor_estado = None
-        melhor_pontuacao = float('-inf')
-        estados_possiveis = []
-
-        for pos in range(9):
-            if self.tabuleiro[pos + 1] == 0:
-                nova_tabuleiro = self.tabuleiro.copy()
-                nova_tabuleiro[pos + 1] = -1
-                estado_str = str(nova_tabuleiro[1:10])
-                pontuacao = self.estado_conhecimento.get(estado_str, 0)
-
-                estados_possiveis.append((pos, pontuacao))
-
-                if pontuacao > melhor_pontuacao:
-                    melhor_pontuacao = pontuacao
-                    melhor_estado = pos
-
-        # Se melhor_estado é None, joga aleatoriamente
-        if melhor_estado is None:
-            self.jogada_aleatoria()
+        estado_atual = tuple(self.tabuleiro[1:10])
+        if estado_atual in self.conhecimento:
+            jogadas_possiveis = self.conhecimento[estado_atual]
+            # Escolher com base na pontuação
+            melhor_jogada = max(jogadas_possiveis.items(), key=lambda x: x[1])[0]
         else:
-            if random.random() < 0.1:  # 10% de chance de escolher aleatoriamente
-                posicao_aleatoria = random.choice([pos for pos, _ in estados_possiveis])
-                self.fazer_jogada(posicao_aleatoria, self.jogador_atual)
+            # Novo estado
+            jogadas_possiveis = {pos: 0 for pos in range(1, 10) if self.tabuleiro[pos] == 0}
+            self.conhecimento[estado_atual] = jogadas_possiveis
+            melhor_jogada = random.choice(list(jogadas_possiveis.keys()))
+        return melhor_jogada
+
+    def atualizar_conhecimento(self, jogadas, resultado):
+        recompensas = {
+            1: 1,   # Vitória
+            0: 0,    # Empate
+            -1: -10   # Derrota
+        }
+        recompensa = recompensas[resultado]
+        for estado, posicao in jogadas:
+            if estado in self.conhecimento:
+                jogadas_possiveis = self.conhecimento[estado]
+                jogadas_possiveis[posicao] += recompensa
             else:
-                self.fazer_jogada(melhor_estado, self.jogador_atual)
+                self.conhecimento[estado] = {posicao: recompensa}
 
 
-    def atualizar_conhecimento(self, estados, resultado):
-        for estado in estados:
-            estado_str = str(estado[1:10])
-            if estado_str not in self.estado_conhecimento:
-                self.estado_conhecimento[estado_str] = 0
-
-            # Atualiza a base de conhecimento com base no resultado
-            if resultado == 1:  # Vitória
-                self.estado_conhecimento[estado_str] += 2
-            elif resultado == -1:  # Derrota
-                self.estado_conhecimento[estado_str] -= 1
-            elif resultado == 0:  # Empate
-                self.estado_conhecimento[estado_str] += 0
-                
-    def carregar_conhecimento(self):
-        try:
-            with open("base_conhecimento.txt", "r") as f:
-                return {linha.split(":")[0]: int(linha.split(":")[1]) for linha in f}
-        except FileNotFoundError:
-            return {}
-
-    def salvar_conhecimento(self):
-        with open("base_conhecimento.txt", "w") as f:
-            for estado, valor in self.estado_conhecimento.items():
-                f.write(f"{estado}:{valor}\n")
-
-    def jogada_computador(self):
+    def jogada_computador(self, jogadas_inteligente: list):
         if self.modo_jogo in ["JxAleatório", "Aleatório_vs_Aleatório"]:
             #print("Jogada do computador aleatório...")
             self.jogada_aleatoria()
@@ -165,7 +157,10 @@ class JogoDaVelha:
             self.jogada_campeao()
         elif self.modo_jogo in ["JxInteligente", "Inteligente_vs_Inteligente"]:
             #print("Jogada do computador inteligente...")
-            self.jogada_inteligente()
+            estado_atual = tuple(self.tabuleiro[1:10])
+            posicao = self.jogada_inteligente()
+            self.fazer_jogada(posicao - 1, self.jogador_atual)
+            jogadas_inteligente.append((estado_atual, posicao))
         elif self.modo_jogo == "Aleatório_vs_Campeão":
             if self.jogador_atual == 1:
                 #print("Jogada do computador aleatório...")
@@ -176,18 +171,24 @@ class JogoDaVelha:
         elif self.modo_jogo == "Campeão_vs_Inteligente":
             if self.jogador_atual == -1:
                 #print("Jogada do computador inteligente...")
-                self.jogada_inteligente()
+                estado_atual = tuple(self.tabuleiro[1:10])
+                posicao = self.jogada_inteligente()
+                self.fazer_jogada(posicao - 1, self.jogador_atual)
+                jogadas_inteligente.append((estado_atual, posicao))
             else:
                 #print("Jogada do computador campeão...")
                 self.jogada_campeao()
         elif self.modo_jogo == "Aleatório_vs_Inteligente":
             if self.jogador_atual == -1:
                 #print("Jogada do computador inteligente...")
-                self.jogada_inteligente()
+                estado_atual = tuple(self.tabuleiro[1:10])
+                posicao = self.jogada_inteligente()
+                self.fazer_jogada(posicao - 1, self.jogador_atual)
+                jogadas_inteligente.append((estado_atual, posicao))
             else:
                 #print("Jogada do computador aleatório...")
                 self.jogada_aleatoria()
-        return False
+        return jogadas_inteligente
     
     def jogada_campeao(self):
         jogador_adversario = 1 if self.jogador_atual == -1 else -1
@@ -212,8 +213,6 @@ class JogoDaVelha:
                     self.fazer_jogada(posicao, self.jogador_atual)
                     return
                 self.tabuleiro[posicao + 1] = 0
-
-        
         
         # Laterais dos cantos
         cantos_com_laterais = {
@@ -229,7 +228,6 @@ class JogoDaVelha:
                 if all(self.tabuleiro[lateral] == jogador_adversario for lateral in laterais) and self.tabuleiro[canto] == 0:
                     self.fazer_jogada(canto - 1, self.jogador_atual)
                     return
-
 
         if self.tabuleiro[5] == jogador_adversario and self.tabuleiro[0] == 1: # Caso o centro esteja ocupado joga em um canto
             if self.tabuleiro[1] == 0:

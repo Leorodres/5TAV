@@ -37,7 +37,6 @@ class JogoDaVelha:
             #print(f"Tabuleiros de todos os jogos: {self.tabuleiros}")
 
     def jogar(self):
-        estados = []
         while True:
             if self.modo_jogo == "JxJ":
                 self.mostrar_tabuleiro()
@@ -61,6 +60,7 @@ class JogoDaVelha:
             else:
                 self.mostrar_tabuleiro()
                 self.jogada_computador()
+
             if self.checar_vencedor():
                 self.mostrar_tabuleiro()
                 vencedor = 'X' if self.jogador_atual == 1 else 'O'
@@ -68,7 +68,7 @@ class JogoDaVelha:
                 self.tabuleiro[10] = vencedor
                 self.resultados[vencedor] += 1
                 if "Inteligente" in self.modo_jogo:
-                    self.atualizar_conhecimento(estados, 1 if vencedor == 'O' else -1)
+                    self.atualizar_conhecimento(self.tabuleiro.copy(), 1 if vencedor == 'O' else -1)
                 break
             elif self.tabuleiro[0] == 9:  # Verifica se deu empate
                 self.mostrar_tabuleiro()
@@ -76,7 +76,7 @@ class JogoDaVelha:
                 self.tabuleiro[10] = 'V'
                 self.resultados["Empate"] += 1
                 if "Inteligente" in self.modo_jogo:
-                    self.atualizar_conhecimento(estados, 0) 
+                    self.atualizar_conhecimento(self.tabuleiro.copy(), 0)
                 break
 
             # Alterna o jogador
@@ -131,20 +131,18 @@ class JogoDaVelha:
             else:
                 self.fazer_jogada(melhor_estado, self.jogador_atual)
 
+    def atualizar_conhecimento(self, estado_final, resultado):
+        estado_str = str(estado_final[1:10])
+        if estado_str not in self.estado_conhecimento:
+            self.estado_conhecimento[estado_str] = 0
 
-    def atualizar_conhecimento(self, estados, resultado):
-        for estado in estados:
-            estado_str = str(estado[1:10])
-            if estado_str not in self.estado_conhecimento:
-                self.estado_conhecimento[estado_str] = 0
-
-            # Atualiza a base de conhecimento com base no resultado
-            if resultado == 1:  # Vitória
-                self.estado_conhecimento[estado_str] += 2
-            elif resultado == -1:  # Derrota
-                self.estado_conhecimento[estado_str] -= 1
-            elif resultado == 0:  # Empate
-                self.estado_conhecimento[estado_str] += 0
+        # Atualiza a base de conhecimento apenas com o estado final do tabuleiro
+        if resultado == 1:  # Vitória
+            self.estado_conhecimento[estado_str] += 2
+        elif resultado == -1:  # Derrota
+            self.estado_conhecimento[estado_str] -= 1
+        elif resultado == 0:  # Empate
+            self.estado_conhecimento[estado_str] += 0
                 
     def carregar_conhecimento(self):
         try:
@@ -222,8 +220,6 @@ class JogoDaVelha:
                     return
                 self.tabuleiro[posicao + 1] = 0
 
-        
-        
         # Laterais dos cantos
         cantos_com_laterais = {
             1: [2, 4],
@@ -238,7 +234,6 @@ class JogoDaVelha:
                 if all(self.tabuleiro[lateral] == jogador_adversario for lateral in laterais) and self.tabuleiro[canto] == 0:
                     self.fazer_jogada(canto - 1, self.jogador_atual)
                     return
-
 
         if self.tabuleiro[5] == jogador_adversario and self.tabuleiro[0] == 1: # Caso o centro esteja ocupado joga em um canto
             if self.tabuleiro[1] == 0:
@@ -286,7 +281,6 @@ class JogoDaVelha:
 
         # joga aleatoriamente caso nada funcione
         self.jogada_aleatoria()
-
 
     def mostrar_tabuleiro(self):
         print("\nTabuleiro atual:")
